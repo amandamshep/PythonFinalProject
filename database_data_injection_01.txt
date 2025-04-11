@@ -1,0 +1,26 @@
+-- Insert Record into Table
+INSERT INTO Reservation (ROOM_ID_REG, ROOM_ID_PENT, BEGINNING_DATE, END_DATE, NAME, EMAIL_ADDRESS)
+VALUES (3, NULL, "2023-10-14", "2023-10-18", "Bob Yang", "bob@yahoo.com");
+
+
+-- Update one of the columns in the Reservation Table for a record
+UPDATE Reservation
+SET 
+    NAME = COALESCE(NULL, NAME),  -- stays the same
+    EMAIL_ADDRESS = COALESCE('sflecker@hotmail.com', EMAIL_ADDRESS),
+    BEGINNING_DATE = COALESCE(NULL, BEGINNING_DATE),  -- stays the same
+    END_DATE = COALESCE(NULL, END_DATE)
+WHERE RESERVATION_NUMBER = 5;
+
+-- Update all of the columns in the Reservation Table for a record
+UPDATE Reservation
+SET 
+    NAME = COALESCE("Bill Smith", NAME),  -- changes
+    EMAIL_ADDRESS = COALESCE(NULL, EMAIL_ADDRESS),
+    BEGINNING_DATE = COALESCE(NULL, BEGINNING_DATE),  -- stays the same
+    END_DATE = COALESCE(NULL, END_DATE)
+WHERE RESERVATION_NUMBER = 1;
+
+-- Delete a record based on reservation id
+DELETE FROM Reservation
+WHERE Reservation_Number = 5;
