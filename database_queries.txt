@@ -4,7 +4,7 @@ SELECT
     r.TYPE,
     r.COST as RATE,
     r.FEATURE_1,
-	r.FEATURE_2,
+    r.FEATURE_2,
     r.FEATURE_3,
     IFNULL(res.BEGINNING_DATE, 'Not Booked') AS BOOKED_FROM,
     IFNULL(res.END_DATE, 'Not Booked') AS BOOKED_TO
@@ -33,11 +33,20 @@ ORDER BY p.ROOM_ID;
 
 
 
-# Reservation Confirmation that shows the reservation information for the customer.
+# Reservation Confirmation that shows the reservation information for the customer if they chose penthouse.
 
 SELECT Reservation_NUMBER,
-ROOM_ID_PENT as ROOM_NUMBER,COST as RATE,TYPE as ROOM_TYPE, FEATURE_5 as VIEWS, BEGINNING_DATE,END_DATE,NAME,
+ROOM_ID_PENT as ROOM_NUMBER,COST as RATE,TYPE as ROOM_TYPE, FEATURE_5 as VIEWS,NAME,
 EMAIL_ADDRESS,BEGINNING_DATE as BOOKED_FROM, END_DATE as BOOKED_TO 
 FROM Reservation as r
 INNER JOIN Penthouse as p ON r.ROOM_ID_PENT = p.ROOM_ID
 WHERE r.RESERVATION_NUMBER = 3;
+
+# Reservation Confirmation that shows the reservation information for the customer if they chose Regular Room
+
+SELECT Reservation_NUMBER,
+ROOM_ID_REG as ROOM_NUMBER,COST as RATE,TYPE as ROOM_TYPE, FEATURE_3 as VIEWS, NAME,
+EMAIL_ADDRESS,BEGINNING_DATE as BOOKED_FROM, END_DATE as BOOKED_TO 
+FROM Reservation as res
+INNER JOIN Regular as reg ON res.ROOM_ID_REG = reg.ROOM_ID
+WHERE res.RESERVATION_NUMBER = 9;
