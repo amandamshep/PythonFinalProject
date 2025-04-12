@@ -1,0 +1,94 @@
+
+-- INSERT
+
+-- Regular
+INSERT INTO Regular (TYPE, COST, FEATURE_1, FEATURE_2, FEATURE_3)  
+VALUES ("Regular", 200, "King Bed", "Standard Bathroom", "Poolside View");
+
+-- Penthouse
+INSERT INTO Penthouse (TYPE, COST, FEATURE_1, FEATURE_2, FEATURE_3, FEATURE_4, FEATURE_5)  
+VALUES ("Penthouse", 750, "King Bed", "Premium Bathroom ", "Kitchen", "Living Room","Poolside View");
+
+
+
+-- DELETE
+
+-- First this delete message should be tried first. If it fails, then it means that this room has already been reserved.
+-- Also if this fails, some sort of message should be printed in Python, like please check with management about deleting this room and notifying the customer
+
+-- Regular
+DELETE FROM Regular WHERE ROOM_ID = 3
+
+-- Penthouse
+DELETE FROM Penthouse WHERE ROOM_ID = 3
+
+-- Then if we get management confirmation, (maybe an if-else) then we can run this statement to successfully delete the record.
+
+-- Reservation
+-- First, delete any reservations associated with the room
+DELETE FROM Reservation WHERE Reservation_ID = 3;
+
+-- Then, delete the room
+DELETE FROM Regular WHERE ROOM_ID = 3;
+
+
+-- Penthouse version
+-- First, delete any reservations associated with the room
+DELETE FROM Reservation WHERE ROOM_ID_PENT = 1;
+
+-- Then, delete the room
+DELETE FROM Penthouse WHERE ROOM_ID = 1;
+
+
+
+-- UPDATE
+
+-- Regular
+-- Just a query to show if a room has been reserved or not before deciding to go ahead with an update. (May also need a message in Python telling the user to be careful about updating if a room has already been reserved, please check with management and notify customer before doing update.) 
+UPDATE Regular
+SET 
+    TYPE = COALESCE(NULL, TYPE),  -- stays the same
+    COST = COALESCE(300, COST),
+    FEATURE_1 = COALESCE(NULL, FEATURE_1),  -- stays the same
+    FEATURE_2 = COALESCE(NULL, FEATURE_2),
+	FEATURE_3 = COALESCE(NULL, FEATURE_3)
+WHERE ROOM_ID = 3;
+
+-- Actual Update Query:
+-- NULL Is used if we don't want to update a value in the column. If we do want to update a value, then we can just type it out for that particular column. 
+UPDATE Regular
+SET 
+    TYPE = COALESCE(NULL, TYPE),  -- stays the same
+    COST = COALESCE(300, COST),
+    FEATURE_1 = COALESCE(NULL, FEATURE_1),  -- stays the same
+    FEATURE_2 = COALESCE(NULL, FEATURE_2),
+	FEATURE_3 = COALESCE(NULL, FEATURE_3)
+WHERE ROOM_ID = 3;
+
+-- Penthouse
+-- Query Follows the same logic as above for showing if a room is reserved or not.
+
+SELECT 
+    p.ROOM_ID,
+    p.TYPE,
+    p.COST,
+    CASE 
+        WHEN res.ROOM_ID_REG IS NOT NULL THEN 'Booked'
+        ELSE 'Not Booked'
+    END AS RESERVATION_STATUS
+FROM Penthouse p
+LEFT JOIN Reservation res
+    ON p.ROOM_ID = res.ROOM_ID_REG;
+
+-- Actual Update Query: 
+
+UPDATE Penthouse
+SET 
+    TYPE = COALESCE(NULL, TYPE),  -- stays the same
+    COST = COALESCE(300, COST),
+    FEATURE_1 = COALESCE(NULL, FEATURE_1),  -- stays the same
+    FEATURE_2 = COALESCE(NULL, FEATURE_2),
+	FEATURE_3 = COALESCE(NULL, FEATURE_3),
+	FEATURE_4 = COALESCE(NULL, FEATURE_4),
+	FEATURE_5 = COALESCE(NULL, FEATURE_5)
+WHERE ROOM_ID = 3;
