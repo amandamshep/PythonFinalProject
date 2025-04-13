@@ -1,4 +1,5 @@
 import db_base as db
+import csv
 
 reset_db_script = """
 
@@ -133,87 +134,127 @@ END;
 """
 
 class RegularRoom(db.DBbase):
-    def __init__(self):
-        pass
+    def __init__(self, row):
+        self.regular_list = []
 
-    def add_regular(self):
+    def add_regular(self, room_type, cost, f1, f2, f3):
         try:
             sql = """
-            
+            INSERT INTO Regular (TYPE, COST, FEATURE_1, FEATURE_2, FEATURE_3)  
+            VALUES (?, ?, ?, ?, ?);
             """
-            super().get_cursor.execute(sql)
+            super().get_cursor.execute(sql, (room_type, cost, f1, f2, f3))
             super().get_connection.commit()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in add_regular.", e)
 
-    def update_regular(self):
+
+    def fetch_regular(self, room_id):
         try:
-            sql = """
-
-                        """
-            super().get_cursor.execute(sql)
-            super().get_connection.commit()
+            return super().get_cursor.execute("SELECT * FROM Regular WHERE ROOM_ID = ?;", (room_id,)).fetchone()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in fetch_regular.", e)
 
-    def delete_regular(self):
+    def read_csv_regular(self, filename):
+        self.regular_list = []
         try:
-            sql = """
-
-                        """
-            super().get_cursor.execute(sql)
-            super().get_connection.commit()
+            with open(filename, 'r') as record:
+                csv_contents = csv.reader(record)
+                next(record)  # skip headers
+                for row in csv_contents:
+                    reg = {
+                        "room_type": row[0],
+                        "cost": row[1],
+                        "f1": row[2],
+                        "f2": row[3],
+                        "f3": row[4]
+                    }
+                    self.regular_list.append(reg)
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in read_csv_regular.", e)
 
-    def fetch_regular(self):
-        try:
-            pass
-        except Exception as e:
-            print("An error occurred.", e)
+    def save_to_db_regular(self):
+        for room in self.regular_list:
+            try:
+                self.add_regular(room['room_type'], room['cost'], room['f1'],room['f2'],room['f3'])
+            except Exception as e:
+                print("An error occurred in save_to_db_regular.",e)
 
 class Penthouse(RegularRoom):
-    def add_pent(self):
+    def __init__(self, row):
+        self.pent_list = []
+
+    def add_pent(self, room_type, cost, f1, f2, f3, f4, f5):
         try:
             sql = """
+                INSERT INTO Penthouse (TYPE, COST, FEATURE_1, FEATURE_2, FEATURE_3, FEATURE_4, FEATURE_5)  
+                VALUES (?, ?, ?, ?, ?, ?,?);
 
             """
-            super().get_cursor.execute(sql)
+            super().get_cursor.execute(sql, (room_type, cost, f1, f2, f3, f4, f5))
             super().get_connection.commit()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in add_pent.", e)
 
-    def fetch_pent(self):
+    def fetch_pent(self, room_id):
         try:
-            pass
+            return super().get_cursor.execute("SELECT * FROM Regular WHERE ROOM_ID = ?;", (room_id,)).fetchone()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in fetch_pent.", e)
+
+    def read_csv_pent(self, filename):
+        self.pent_list = []
+        try:
+            with (open(filename, 'r') as record):
+                csv_contents = csv.reader(record)
+                next(record)  # skip headers
+                for row in csv_contents:
+                    pent = { "room_type" : row[0],
+                             "cost": row[1],
+                             "f1": row[2],
+                             "f2": row[3],
+                             "f3": row[4],
+                             "f4": row[5],
+                             "f5": row[6],
+                             }
+                    self.pent_list.append(pent)
+        except Exception as e:
+            print("An error occurred in read_csv_pent.", e)
+
+    def save_to_db_pent(self):
+        for room in self.pent_list:
+            try:
+                self.add_pent(room['room_type'], room['cost'], room['f1'],room['f2'],room['f3'], room['f4'], room['f5'])
+            except Exception as e:
+                print("An error occurred in save_to_db_pent.", e)
+
 
 class Reservations(db.DBbase):
     def __init__(self):
         super(Reservations, self).__init__("HotelReservations.sqlite")
+        self.res_list = []
 
     def reset_database(self):
         try:
             sql = reset_db_script
             super().execute_script(sql)
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in reset_database.", e)
         finally:
             super().close_db()
 
-    def add_reservation(self, beg_date, end_date, name, email, room_id_reg = None, room_id_pent=None):
+    def add_reservation(self, start_date, end_date, name, email, room_id_reg = None, room_id_pent=None):
         try:
             sql = """
                 INSERT INTO Reservation (ROOM_ID_REG, ROOM_ID_PENT, BEGINNING_DATE, END_DATE, NAME, EMAIL_ADDRESS)
                 VALUES (?,?,?,?,?,?);
             """
-            super().get_cursor.execute(sql, (room_id_reg, room_id_pent, beg_date, end_date, name, email))
+            super().get_cursor.execute(sql, (room_id_reg, room_id_pent, start_date, end_date, name, email))
             super().get_connection.commit()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in add_reservation.", e)
 
-    def update_reservation(self, name, email, beg_date, end_date, reservation_number):
+    def update_reservation(self, name, email, start_date, end_date, reservation_number):
         try:
             sql = """
                 UPDATE Reservation
@@ -224,10 +265,10 @@ class Reservations(db.DBbase):
                     END_DATE = ?
                 WHERE RESERVATION_NUMBER = ?;
                         """
-            super().get_cursor.execute(sql, (name, email, beg_date, end_date, reservation_number))
+            super().get_cursor.execute(sql, (name, email, start_date, end_date, reservation_number))
             super().get_connection.commit()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in update_reservation.", e)
 
     def delete_reservation(self, reservation_number):
         try:
@@ -238,10 +279,39 @@ class Reservations(db.DBbase):
             super().get_cursor.execute(sql, (reservation_number,))
             super().get_connection.commit()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in delete_reservation.", e)
 
     def fetch_reservation(self, reservation_number):
         try:
             return super().get_cursor.execute("SELECT * FROM Reservation WHERE Reservation_Number = ?;", (reservation_number,)).fetchone()
         except Exception as e:
-            print("An error occurred.", e)
+            print("An error occurred in fetch_reservation.", e)
+
+    def read_csv_reservation(self, filename):
+        self.res_list = []
+        try:
+            with (open(filename, 'r') as record):
+                csv_contents = csv.reader(record)
+                next(record)  # skip headers
+                for row in csv_contents:
+                    res = {"res_number": row[0],
+                            "name": row[1],
+                            "email": row[2],
+                            "start": row[3],
+                            "end": row[4],
+                            "reg_id": row[5],
+                            "pent_id": row[6],
+                            }
+                    self.res_list.append(res)
+        except Exception as e:
+            print("An error occurred in read_csv_reservations.", e)
+
+    def save_to_db_reservation(self):
+        for res in self.res_list:
+            try:
+                self.add_reservation(res['start_date'], res['end_date'], res['name'], res['email'], res['room_id_reg'], res['room_id_pent'])
+            except Exception as e:
+                print("An error occurred in save_to_db_pent.", e)
+
+    def get_available_rooms_for_dates(self):
+        pass
