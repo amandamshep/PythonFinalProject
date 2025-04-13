@@ -1,20 +1,17 @@
-# This is a sample Python script.
+import rooms
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+#initial set up of tables and data loading:
 
+proj = rooms.Reservations()
+proj.reset_database()
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+reg_reader = rooms.RegularRoom()
+reg_reader.read_csv_regular("regular_room.csv")
+reg_reader.save_to_db_regular()
 
+pent_reader = rooms.Penthouse()
+pent_reader.read_csv_pent("pent_room.csv")
+pent_reader.save_to_db_pent()
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
-
-
-# read reservation csv here
-# are we doing a reservations class?
+proj.read_csv_reservation("reservations.csv")
+proj.save_to_db_reservation()
