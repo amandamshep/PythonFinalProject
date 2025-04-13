@@ -1,4 +1,13 @@
 
+-- RETRIEVE
+
+-- Regular
+SELECT * FROM Regular WHERE ROOM_ID = 2;
+
+-- Penthouse
+SELECT * FROM Penthouse WHERE ROOM_ID = 2;
+
+
 -- INSERT
 
 -- Regular
