@@ -1,5 +1,3 @@
-import os
-os.chdir(r"C:\Users\varun\Box Sync\Business Analytics Degree\Semesters\Spring Semester 2025\IS 6495\Project\Database_02")
 import db_base as db
 import csv
 
