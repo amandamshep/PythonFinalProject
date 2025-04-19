@@ -1,0 +1,407 @@
+import os
+os.chdir(r"C:\Users\varun\Box Sync\Business Analytics Degree\Semesters\Spring Semester 2025\IS 6495\Project\Database_02")
+import db_base as db
+import csv
+
+reset_db_script = """
+
+DROP TABLE IF EXISTS Reservation;
+
+CREATE TABLE Reservation (
+    RESERVATION_NUMBER INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    ROOM_ID_REG INTEGER,
+    ROOM_ID_PENT INTEGER,
+    BEGINNING_DATE DATE NOT NULL,
+    END_DATE DATE NOT NULL,
+    NAME TEXT,
+    EMAIL_ADDRESS TEXT,
+    FOREIGN KEY (ROOM_ID_REG) REFERENCES Regular(ROOM_ID),
+    FOREIGN KEY (ROOM_ID_PENT) REFERENCES Penthouse(ROOM_ID)
+);
+
+
+CREATE TRIGGER prevent_overlap_regular
+BEFORE INSERT ON Reservation
+WHEN NEW.ROOM_ID_REG IS NOT NULL
+BEGIN
+    SELECT 
+    CASE
+        WHEN EXISTS (
+            SELECT 1 FROM Reservation
+            WHERE ROOM_ID_REG = NEW.ROOM_ID_REG
+              AND (
+                    (NEW.BEGINNING_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (NEW.END_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (BEGINNING_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+                 OR (END_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+              )
+        )
+        THEN RAISE(ABORT, 'Conflict: Overlapping dates for regular room.')
+    END;
+END;
+
+
+CREATE TRIGGER prevent_overlap_penthouse
+BEFORE INSERT ON Reservation
+WHEN NEW.ROOM_ID_PENT IS NOT NULL
+BEGIN
+    SELECT 
+    CASE
+        WHEN EXISTS (
+            SELECT 1 FROM Reservation
+            WHERE ROOM_ID_PENT = NEW.ROOM_ID_PENT
+              AND (
+                    (NEW.BEGINNING_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (NEW.END_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (BEGINNING_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+                 OR (END_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+              )
+        )
+        THEN RAISE(ABORT, 'Conflict: Overlapping dates for penthouse room.')
+    END;
+END;
+
+
+CREATE TRIGGER prevent_overlap_regular_update
+BEFORE UPDATE ON Reservation
+WHEN NEW.ROOM_ID_REG IS NOT NULL
+BEGIN
+    SELECT 
+    CASE
+        WHEN EXISTS (
+            SELECT 1 FROM Reservation
+            WHERE ROOM_ID_REG = NEW.ROOM_ID_REG
+              AND RESERVATION_NUMBER != OLD.RESERVATION_NUMBER
+              AND (
+                    (NEW.BEGINNING_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (NEW.END_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (BEGINNING_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+                 OR (END_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+              )
+        )
+        THEN RAISE(ABORT, 'Conflict: Overlapping dates for regular room.')
+    END;
+END;
+
+
+CREATE TRIGGER prevent_overlap_penthouse_update
+BEFORE UPDATE ON Reservation
+WHEN NEW.ROOM_ID_PENT IS NOT NULL
+BEGIN
+    SELECT 
+    CASE
+        WHEN EXISTS (
+            SELECT 1 FROM Reservation
+            WHERE ROOM_ID_PENT = NEW.ROOM_ID_PENT
+              AND RESERVATION_NUMBER != OLD.RESERVATION_NUMBER
+              AND (
+                    (NEW.BEGINNING_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (NEW.END_DATE BETWEEN BEGINNING_DATE AND END_DATE)
+                 OR (BEGINNING_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+                 OR (END_DATE BETWEEN NEW.BEGINNING_DATE AND NEW.END_DATE)
+              )
+        )
+        THEN RAISE(ABORT, 'Conflict: Overlapping dates for penthouse room.')
+    END;
+END;
+
+DROP TABLE IF EXISTS Regular;
+
+CREATE TABLE Regular(
+ROOM_ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+TYPE CHAR(7),
+COST NUMERIC,
+FEATURE_1 TEXT,
+FEATURE_2 TEXT,
+FEATURE_3 TEXT
+);
+
+
+DROP TRIGGER IF EXISTS prevent_update_if_reserved_regular;
+
+                CREATE TRIGGER prevent_update_if_reserved_regular
+                BEFORE UPDATE ON Regular
+                FOR EACH ROW
+                WHEN EXISTS (
+                    SELECT 1 FROM Reservation
+                    WHERE ROOM_ID_REG = OLD.ROOM_ID
+                )
+                BEGIN
+                    SELECT RAISE(FAIL, 'This room cannot be updated because it has already been reserved. If the room needs to be updated, please consult with management about notifying customer before updating this room.');
+                END;
+
+DROP TABLE IF EXISTS Penthouse;
+
+CREATE TABLE Penthouse (
+ROOM_ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+TYPE CHAR(9),
+COST NUMERIC,
+FEATURE_1 TEXT,
+FEATURE_2 TEXT,
+FEATURE_3 TEXT,
+FEATURE_4 TEXT,
+FEATURE_5 TEXT
+);
+
+DROP TRIGGER IF EXISTS prevent_update_if_reserved_penthouse;
+
+CREATE TRIGGER prevent_update_if_reserved_penthouse
+BEFORE UPDATE ON Penthouse
+FOR EACH ROW
+WHEN EXISTS (
+    SELECT 1 FROM Reservation
+    WHERE ROOM_ID_PENT = OLD.ROOM_ID
+)
+BEGIN
+    SELECT RAISE(FAIL, 'This room cannot be updated because it has already been reserved. If the room needs to be updated, please consult with management about notifying customer before updating this room.');
+END;
+
+"""
+
+class Reservations(db.DBbase):
+    def __init__(self):
+        self.res_list = []
+        super(Reservations, self).__init__("HotelReservations.sqlite")
+
+    def reset_database(self):
+        try:
+            sql = reset_db_script
+            super().execute_script(sql)
+        except Exception as e:
+            print("An error occurred in reset_database.", e)
+        # finally:
+        #     super().close_db()
+
+    def add_reservation(self, start_date, end_date, name, email, room_id_reg = None, room_id_pent=None):
+        try:
+            if room_id_reg == "0":
+                sql = """
+                        INSERT INTO Reservation (ROOM_ID_REG, ROOM_ID_PENT, BEGINNING_DATE, END_DATE, NAME, EMAIL_ADDRESS)
+                        VALUES (NULL,?,?,?,?,?);
+                    """
+                super().get_cursor.execute(sql, (room_id_pent, start_date, end_date, name, email))
+                print(room_id_reg, room_id_pent, start_date, end_date, name, email)
+            if room_id_pent == "0":
+                sql = """
+                        INSERT INTO Reservation (ROOM_ID_REG, ROOM_ID_PENT, BEGINNING_DATE, END_DATE, NAME, EMAIL_ADDRESS)
+                        VALUES (?,NULL,?,?,?,?);
+                    """
+                super().get_cursor.execute(sql, (room_id_reg, start_date, end_date, name, email))
+                print(room_id_reg, room_id_pent, start_date, end_date, name, email)
+            super().get_connection.commit()
+        except Exception as e:
+            print("An error occurred in add_reservation.", e)
+
+    def update_reservation(self, name, email, start_date, end_date, reservation_number):
+        try:
+            sql = """
+                UPDATE Reservation
+                SET 
+                    NAME = ?,
+                    EMAIL_ADDRESS = ?,
+                    BEGINNING_DATE = ?,
+                    END_DATE = ?
+                WHERE RESERVATION_NUMBER = ?;
+                        """
+            super().get_cursor.execute(sql, (name, email, start_date, end_date, reservation_number))
+            super().get_connection.commit()
+        except Exception as e:
+            print("An error occurred in update_reservation.", e)
+
+    def delete_reservation(self, room_id):
+        try:
+            super().get_connection.execute("PRAGMA foreign_keys = ON;")
+            sql = """DELETE FROM Regular WHERE ROOM_ID = ?;"""
+            super().get_cursor.execute(sql, (room_id,))
+            super().get_connection.commit()
+            print("If you get an error about 'FOREIGN KEY CONSTRAINT FAILED', this means that the room is reserved. \n Please check with management about next steps. \n Note that to delete a room, the reservation must be deleted.")
+        except Exception as e:
+            print("An error occurred in delete_reservation.", e)
+
+    def fetch_reservation(self, reservation_number):
+        try:
+            return super().get_cursor.execute("SELECT * FROM Reservation WHERE Reservation_Number = ?;", (reservation_number,)).fetchone()
+        except Exception as e:
+            print("An error occurred in fetch_reservation.", e)
+
+    def read_csv_reservation(self, filename):
+        self.res_list = []
+        try:
+            with (open(filename, 'r') as record):
+                csv_contents = csv.reader(record)
+                next(record)  # skip headers
+                for row in csv_contents:
+                    res = { "name": row[0],
+                            "email": row[1],
+                            "start_date": row[2],
+                            "end_date": row[3],
+                            "room_id_reg": row[4],
+                            "room_id_pent": row[5],
+                            }
+                    self.res_list.append(res)
+        except Exception as e:
+            print("An error occurred in read_csv_reservations.", e)
+
+    def save_to_db_reservation(self):
+        for res in self.res_list:
+            try:
+                self.add_reservation(res['start_date'], res['end_date'], res['name'], res['email'], res['room_id_reg'], res['room_id_pent'])
+            except Exception as e:
+                print("An error occurred in save_to_db_reservation.", e)
+
+    def get_available_rooms_for_dates(self):
+        pass
+
+
+class RegularRoom(Reservations):
+    def __init__(self):
+        self.regular_list = []
+        super(Reservations, self).__init__("HotelReservations.sqlite")
+
+    def add_regular(self, room_type, cost, f1, f2, f3):
+        try:
+            sql = """
+            INSERT INTO Regular (TYPE, COST, FEATURE_1, FEATURE_2, FEATURE_3)  
+            VALUES (?, ?, ?, ?, ?);
+            """
+            super().get_cursor.execute(sql, (room_type, cost, f1, f2, f3))
+            super().get_connection.commit()
+        except Exception as e:
+            print("An error occurred in add_regular.", e)
+
+    def update_regular(self,room_id,cost = None,f1 = None,f2 = None,f3 = None): # Update the regular room
+        try: # Don't want to allow users to accidentally change the room_type, since that will create issues when users go to book reservations. 
+            sql = """
+            UPDATE Regular
+                SET 
+                    COST = COALESCE(?, COST),
+                    FEATURE_1 = COALESCE(?, FEATURE_1),
+                    FEATURE_2 = COALESCE(?, FEATURE_2),
+                    FEATURE_3 = COALESCE(?, FEATURE_3)
+                WHERE ROOM_ID = ?;
+            """
+            super().get_cursor.execute(sql,(cost,f1,f2,f3,room_id)) # Variables to be put in place of the placeholders, "?"
+            super().get_connection.commit() # Commit the changes, i.e make it permanent.
+        except Exception as e: # Create try-except clause to handle errors, except clause to help Python with failing gracefully.
+            print("An error occurred in update_regular.",e)
+
+    def delete_regular(self,room_id): # Delete the regular room
+        try: # Create try-except clause to handle errors.
+            sql = """
+            DELETE FROM Regular WHERE ROOM_ID = ?;
+            """
+            super().get_cursor.execute(sql,(room_id,)) # Variables to be put in place of the placeholders, "?"
+            super().get_connection.commit() # Commit the changes, i.e make it permanent.
+        except Exception as e: # Except clause created to handle errors
+            print("If you see an error stating that 'FOREIGN KEY constraint failed', this means that the room is reserved. Please check with management about notifying customer and next steps if the room must be deleted.\n Please keep in mind that the customer's reservation would first have to be deleted before the room can be deleted.",e)
+    
+    def fetch_regular(self, room_id):
+        try:
+            return super().get_cursor.execute("SELECT * FROM Regular WHERE ROOM_ID = ?;", (room_id,)).fetchone()
+        except Exception as e:
+            print("An error occurred in fetch_regular.", e)
+
+    def read_csv_regular(self, filename):
+        self.regular_list = []
+        try:
+            with open(filename, 'r') as record:
+                csv_contents = csv.reader(record)
+                next(record)  # skip headers
+                for row in csv_contents:
+                    reg = {
+                        "room_type": row[0],
+                        "cost": row[1],
+                        "f1": row[2],
+                        "f2": row[3],
+                        "f3": row[4]
+                    }
+                    self.regular_list.append(reg)
+        except Exception as e:
+            print("An error occurred in read_csv_regular.", e)
+
+    def save_to_db_regular(self):
+        for room in self.regular_list:
+            try:
+                self.add_regular(room['room_type'], room['cost'], room['f1'],room['f2'],room['f3'])
+            except Exception as e:
+                print("An error occurred in save_to_db_regular.",e)
+
+class Penthouse(RegularRoom):
+    def __init__(self):
+        super(Reservations, self).__init__("HotelReservations.sqlite")
+        self.pent_list = []
+
+
+    def add_pent(self, room_type, cost, f1, f2, f3, f4, f5):
+        try:
+            sql = """
+                INSERT INTO Penthouse (TYPE, COST, FEATURE_1, FEATURE_2, FEATURE_3, FEATURE_4, FEATURE_5)  
+                VALUES (?, ?, ?, ?, ?, ?,?);
+
+            """
+            super().get_cursor.execute(sql, (room_type, cost, f1, f2, f3, f4, f5))
+            super().get_connection.commit()
+        except Exception as e:
+            print("An error occurred in add_pent.", e)
+    
+    def update_pent(self,room_id,cost = None,f1 = None,f2 = None,f3 = None,f4 = None,f5 = None): # Update details of penthouse rooms
+        try: # Don't want to allow users to accidentally change the room_type, since that will create issues when users go to book reservations. 
+            sql = """
+            UPDATE Penthouse
+                SET 
+                    COST = COALESCE(?, COST),
+                    FEATURE_1 = COALESCE(?, FEATURE_1),
+                    FEATURE_2 = COALESCE(?, FEATURE_2),
+                    FEATURE_3 = COALESCE(?, FEATURE_3),
+                    FEATURE_4 = COALESCE(?, FEATURE_4),
+                    FEATURE_5 = COALESCE(?, FEATURE_5)
+                WHERE ROOM_ID = ?;
+            """
+            super().get_cursor.execute(sql,(cost,f1,f2,f3,f4,f5,room_id)) # Variables that will be inserted in place of the placeholders 
+            super().get_connection.commit() # Commit the changes to the database, i.e make it permanent.
+        except Exception as e: # Create exception clause in event that the code fails.
+            print("An error occurred in update_pent.",e)
+
+    def fetch_pent(self, room_id):
+        try:
+            return super().get_cursor.execute("SELECT * FROM Regular WHERE ROOM_ID = ?;", (room_id,)).fetchone()
+        except Exception as e:
+            print("An error occurred in fetch_pent.", e)
+
+    def delete_pent(self,room_id): # Delete any penthouse room if needed based on room id.
+            try: # Create try-except clause to handle errors.
+                sql = """
+                DELETE FROM Penthouse WHERE ROOM_ID = ?;
+                """
+                super().get_cursor.execute(sql,(room_id,)) # Variables that will be inserted in place of the placeholders.
+                super().get_connection.commit() # Commit the changes to the database, i.e make it permanent.
+            except Exception as e:  # Create exception clause in event that the code fails.
+                print("If you see an error stating that 'FOREIGN KEY constraint failed', this means that the room is reserved. Please check with management about notifying customer and next steps if the room must be deleted.\n Please keep in mind that the customer's reservation would first have to be deleted before the room can be deleted.",e)
+    def read_csv_pent(self, filename):
+        self.pent_list = []
+        try:
+            with (open(filename, 'r') as record):
+                csv_contents = csv.reader(record)
+                next(record)  # skip headers
+                for row in csv_contents:
+                    pent = { "room_type" : row[0],
+                             "cost": row[1],
+                             "f1": row[2],
+                             "f2": row[3],
+                             "f3": row[4],
+                             "f4": row[5],
+                             "f5": row[6],
+                             }
+                    self.pent_list.append(pent)
+        except Exception as e:
+            print("An error occurred in read_csv_pent.", e)
+
+    def save_to_db_pent(self):
+        for room in self.pent_list:
+            try:
+                self.add_pent(room['room_type'], room['cost'], room['f1'],room['f2'],room['f3'], room['f4'], room['f5'])
+            except Exception as e:
+                print("An error occurred in save_to_db_pent.", e)
+
+
+
